@@ -176,7 +176,7 @@ const addEntity = async (defaults, entity) => {
                          auto_renew_period, key, memo)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`,
     [
-      EntityId.of(entity.shard, entity.realm, entity.num).getEncodedId(),
+      EntityId.of(BigInt(entity.shard), BigInt(entity.realm), BigInt(entity.num)).getEncodedId(),
       entity.type,
       entity.shard,
       entity.realm,
@@ -203,7 +203,7 @@ const addAccount = async (account) => {
 
 const setAccountBalance = async (balance) => {
   balance = {timestamp: 0, id: null, balance: 0, realm_num: 0, ...balance};
-  const accountId = EntityId.of(config.shard, balance.realm_num, balance.id).getEncodedId();
+  const accountId = EntityId.of(BigInt(config.shard), BigInt(balance.realm_num), BigInt(balance.id)).getEncodedId();
   await sqlConnection.query(
     `INSERT INTO account_balance (consensus_timestamp, account_id, balance)
      VALUES ($1, $2, $3);`,
@@ -215,7 +215,11 @@ const setAccountBalance = async (balance) => {
       balance.timestamp,
       accountId,
       tokenBalance.balance,
-      EntityId.of(config.shard, tokenBalance.token_realm, tokenBalance.token_num).getEncodedId(),
+      EntityId.of(
+        BigInt(config.shard),
+        BigInt(tokenBalance.token_realm),
+        BigInt(tokenBalance.token_num)
+      ).getEncodedId(),
     ]);
     await sqlConnection.query(
       pgformat(
@@ -246,7 +250,6 @@ const addTransaction = async (transaction) => {
   if (transaction.valid_start_timestamp === undefined) {
     transaction.valid_start_timestamp = transaction.consensus_timestamp.minus(1);
   }
-
   const payerAccount = EntityId.fromString(transaction.payerAccountId);
   const nodeAccount = EntityId.fromString(transaction.nodeAccountId, 'nodeAccountId', true);
   const entityId = EntityId.fromString(transaction.entity_id, 'entity_id', true);
@@ -307,12 +310,12 @@ const insertTokenTransfers = async (consensusTimestamp, transfers) => {
   );
 };
 
-const insertNftTransfers = async (consensusTimestamp, transfers) => {
-  if (!transfers || transfers.length === 0) {
+const insertNftTransfers = async (consensusTimestamp, nftTransferList) => {
+  if (!nftTransferList || nftTransferList.length === 0) {
     return;
   }
 
-  const nftTransfers = transfers.map((transfer) => {
+  const nftTransfers = nftTransferList.map((transfer) => {
     return [
       `${consensusTimestamp}`,
       EntityId.fromString(transfer.receiver_account_id, '', true).getEncodedId(),
@@ -562,6 +565,8 @@ const addNft = async (nft) => {
 module.exports = {
   addAccount,
   addCryptoTransaction,
+  addNft,
+  addToken,
   setAccountBalance,
   setUp,
 };
